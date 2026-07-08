@@ -1,0 +1,13 @@
+# 运行时生成，不进仓库
+venv/
+.modelscope/
+__pycache__/
+*.pyc
+# 测试音频/输出
+test_audio/
+*.wav
+*.m4a
+*.mp3
+result*.txt
+# 但保留自带的示例音频
+!examples/asr_example.wav
