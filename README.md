@@ -14,6 +14,7 @@ OpenClaw、WorkBuddy 等任何能读 [Agent Skills](https://docs.claude.com/en/d
 
 - 中文为主、支持 50+ 语言的语音识别（SenseVoiceSmall）
 - 自动切分长音频（VAD）、自动加标点、自动去语气词
+- 可选说话人分离（`--spk`，cam++ 声纹聚类）：标出谁在说话
 - 任意音频格式自动转码（ffmpeg / macOS afconvert）
 - 设备自动选择：Apple Silicon (MPS) / NVIDIA (CUDA) / CPU
 
@@ -71,6 +72,7 @@ python <skill目录>/scripts/transcribe.py 录音.m4a --out 结果.txt
 | `--out FILE` | 结果写入文件（默认只打印到屏幕） |
 | `--no-punc` | 不加标点，更快 |
 | `--keep-fillers` | 保留「嗯/啊」等语气词 |
+| `--spk` | 说话人分离（cam++），输出带 `[说话人N]` 标注 |
 
 ## 通过 agent 用
 
@@ -127,6 +129,7 @@ OpenClaw, WorkBuddy, etc. Just drop it into that agent's skills directory.
 
 - Speech recognition for Chinese + 50 other languages (SenseVoiceSmall)
 - Auto-segments long audio (VAD), adds punctuation, strips filler words
+- Optional speaker diarization (`--spk`, cam++): labels who is speaking
 - Auto-transcodes any audio format (ffmpeg / macOS afconvert)
 - Auto device selection: Apple Silicon (MPS) / NVIDIA (CUDA) / CPU
 
@@ -181,6 +184,7 @@ python <skill_dir>/scripts/transcribe.py audio.m4a --out result.txt
 | `--out FILE` | Write result to file (default: print to stdout) |
 | `--no-punc` | Skip punctuation (faster) |
 | `--keep-fillers` | Keep filler words |
+| `--spk` | Speaker diarization (cam++), labels output with `[speaker N]` |
 
 ### Troubleshooting
 
