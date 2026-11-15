@@ -3,7 +3,7 @@
 FunASR 语音转文字 —— 可移植版
 
 用法:
-    python3 transcribe.py <音频文件> [--out result.txt] [--keep-fillers] [--no-punc]
+    python3 transcribe.py <音频文件> [--out result.txt] [--keep-fillers] [--no-punc] [--spk]
 
 支持任意常见音频格式（m4a/mp3/wav/...）。非 16k WAV 会自动用 ffmpeg
 （找不到则退回 macOS 的 afconvert）转码后再识别。
@@ -63,6 +63,8 @@ def main():
     ap.add_argument("--out", help="把结果写入该文件（默认只打印到 stdout）")
     ap.add_argument("--keep-fillers", action="store_true", help="保留嗯/啊等语气词")
     ap.add_argument("--no-punc", action="store_true", help="不加标点（更快）")
+    ap.add_argument("--spk", action="store_true",
+                    help="说话人分离（cam++ 声纹模型），输出带 [说话人N] 标注")
     args = ap.parse_args()
 
     if not os.path.exists(args.audio):
@@ -95,6 +97,9 @@ def main():
     if not args.no_punc:
         # 标点恢复
         model_kwargs["punc_model"] = "iic/punc_ct-transformer_zh-cn-common-vocab272727-pytorch"
+    if args.spk:
+        # 说话人分离：按音色聚类，给每句话标上说话人编号
+        model_kwargs["spk_model"] = "cam++"
 
     model = AutoModel(**model_kwargs)
 
@@ -104,18 +109,42 @@ def main():
     if tmp_wav:
         os.unlink(tmp_wav)
 
-    # 拼接结果文本
+    def clean(t: str) -> str:
+        t = re.sub(r'<\|[^>]+\|>', '', t).strip()  # 去掉 <|zh|><|NEUTRAL|> 等标记
+        if not args.keep_fillers:
+            for f in FILLERS:
+                t = t.replace(f, '')
+        return t
+
+    # ---- 说话人分离输出（--spk）----
+    if args.spk:
+        lines = []
+        for item in (result if isinstance(result, list) else [result]):
+            if not isinstance(item, dict):
+                continue
+            for seg in item.get("sentence_info") or []:
+                t = clean(seg.get("text", ""))
+                if t:
+                    lines.append(f"[说话人{seg.get('spk', '?')}] {t}")
+        if lines:
+            text = "\n".join(lines)
+            print(text)
+            if args.out:
+                with open(args.out, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+                print(f"\n💾 已写入 {args.out}", file=sys.stderr)
+            return
+        print("⚠️  未拿到说话人信息，改用普通输出", file=sys.stderr)
+
+    # ---- 普通输出 ----
     parts = []
     for item in (result if isinstance(result, list) else [result]):
         t = item.get("text", "") if isinstance(item, dict) else str(item)
-        t = re.sub(r'<\|[^>]+\|>', '', t).strip()  # 去掉 <|zh|><|NEUTRAL|> 等标记
+        t = clean(t)
         if t:
             parts.append(t)
     text = "".join(parts)
-
     if not args.keep_fillers:
-        for f in FILLERS:
-            text = text.replace(f, '')
         text = re.sub(r'\s+', '', text) if not re.search(r'[a-zA-Z]', text) else text
 
     print(text)
